@@ -1,0 +1,87 @@
+* E:\EDL\LAB3\lab3_b_adding_speedCircuit.asc
+RB o1 b1 680
+RB2 o2 b2 680
+C8 N001 0 47µ
+VDC N001 0 10
+XX1 b1 b2 N001 0 N002 N003 h_bridge1
+XX2 N002 N003 enc Omega dc_motor_model
+VCC VCC 0 5
+C5 VCC 0 0.1µ
+C6 VCC 0 .1µ
+C7 VCC 0 47µ
+XX3 enc NC_01 sense_pwm VCC speedsensor_circuit_555_oneshot_trigger
+XX4 CW speed_ref sense_pwm o1 VCC feedback_circuit
+XX5 CCW speed_ref sense_pwm o2 VCC feedback_circuit
+R3 speed_ref REF 18k
+c12 speed_ref 0 1µ
+VCC1 VDC 0 10
+C1 VDC 0 0.1µ
+C2 VDC 0 .1µ
+C3 VDC 0 47µ
+
+* block symbol definitions
+.subckt h_bridge1 B1 B2 DCSupply DCgnd DC2 DC1
+Q1 DCgnd B1 DC1 0 2N2905A
+Q2 DCgnd B2 DC2 0 2N2905A
+Q3 DCSupply B1 DC1 0 FZT849
+Q4 DCSupply B2 DC2 0 FZT849
+C1 DCSupply DCgnd 47µ
+.ends h_bridge1
+
+.subckt dc_motor_model +DC -DC enc omega
+Aenc N002 0 0 0 0 p 0 0 SCHMITT Vt=0.5 Vh=0.5 td=10n
+Bp 0 N002 I=kenc*abs(v(omega))*(V(p)-0.5)
+Cenc N002 0 1m
+LM +DC N001 65µH
+RM N001 emf {RM}
+Bemf emf -DC V=k*V(omega)
+B§Itorque 0 omega I=k*I(Bemf)
+C_Jinertia omega 0 {J}
+R_Bfriction omega 0 {1/B}
+Benc N003 0 V=5*V(p)
+B§I_load_torque_int omega 0 I=sgn(v(omega))*min(Tint,0.1*abs(v(omega)))
+R1 enc N003 220
+.param kenc=0.49
+.param RM=2.02
+.param k = 0.9
+.param J = 1.03m
+.param B = 5.94m
+.param Tint = 0.0407
+.ends dc_motor_model
+
+.subckt speedsensor_circuit_555_oneshot_trigger ENC pwm_buffered Speed VCC
+R1 VCC trig 1k
+D1 trig VCC 1N4148
+C1 ENC trig 4.7n
+XU1 0 trig 555_out VCC N002 N001 N001 VCC NE555
+R2 VCC N001 6.3k
+C2 N001 0 .1µ
+C3 N002 0 0.1µF
+R3 pwm_buffered Speed 200k
+C4 Speed 0 .1µ
+R4 0 N003 33k
+R5 N003 VCC 33k
+XU2 555_out N003 VCC 0 pwm_buffered level.2 Avol=1Meg GBW=3Meg Slew=2.4Meg ilimit=20m rail=0.1 Vos=0 phimargin=45 en=0 enk=0 in=0 ink=0 Rin=500Meg
+.ends speedsensor_circuit_555_oneshot_trigger
+
+.subckt feedback_circuit C Ref Sense B Vcc
+XU1 Ref N001 VDC 0 B level.2 Avol=1Meg GBW=3Meg Slew=2.4Meg ilimit=20m rail=0.1 Vos=0 phimargin=45 en=0 enk=0 in=0 ink=0 Rin=500Meg
+R1 N001 Sense 18k
+C1 B N001 1µ
+M1 N001 C Vcc Vcc HAT1072H
+R2 C 0 22k
+.ends feedback_circuit
+
+.model D D
+.lib C:\Users\kwat1\Documents\LTspiceXVII\lib\cmp\standard.dio
+.model NPN NPN
+.model PNP PNP
+.lib C:\Users\kwat1\Documents\LTspiceXVII\lib\cmp\standard.bjt
+.model NMOS NMOS
+.model PMOS PMOS
+.lib C:\Users\kwat1\Documents\LTspiceXVII\lib\cmp\standard.mos
+.tran 0 0.05 0 startup
+.lib NE555.sub
+.lib UniversalOpamps2.sub
+.backanno
+.end
